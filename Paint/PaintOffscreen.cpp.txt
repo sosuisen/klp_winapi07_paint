@@ -119,21 +119,7 @@ LRESULT CALLBACK WndProc(
              * 計算して与えることが可能（発展課題）
              * 下では NULL を与えてウィンドウ全体を更新領域に追加
              */
-            // InvalidateRect(hwnd, NULL, false);
-
-            RECT rect{};
-            rect.left = moveToPoint.x < lineToPoint.x ? moveToPoint.x : lineToPoint.x;
-            rect.right = moveToPoint.x > lineToPoint.x ? moveToPoint.x : lineToPoint.x;
-            rect.top = moveToPoint.y < lineToPoint.y ? moveToPoint.y : lineToPoint.y;
-            rect.bottom = moveToPoint.y > lineToPoint.y ? moveToPoint.y : lineToPoint.y;
-
-            // rect.left と rect.right が同じ
-            // あるいは rect.top と rect.bottom が同じ値の場合、
-            // WM_PAINTは呼ばれない
-            // よって right と bottom に1足しておけば安全。
-            rect.right++;
-            rect.bottom++;
-            InvalidateRect(hwnd, &rect, false);
+            InvalidateRect(hwnd, NULL, false);
 
         }
         else {

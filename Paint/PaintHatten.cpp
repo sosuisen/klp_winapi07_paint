@@ -121,6 +121,7 @@ LRESULT CALLBACK WndProc(
              */
             // InvalidateRect(hwnd, NULL, false);
 
+
             RECT rect{};
             rect.left = moveToPoint.x < lineToPoint.x ? moveToPoint.x : lineToPoint.x;
             rect.right = moveToPoint.x > lineToPoint.x ? moveToPoint.x : lineToPoint.x;

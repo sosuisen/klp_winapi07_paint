@@ -1,10 +1,9 @@
 ﻿#include <windows.h>
 #include <windowsx.h> // GET_X_LPARAN, GET_Y_LPARAMマクロの定義
 #include <string>
-#include <chrono>
 
-static const int MAX_WIDTH = 1200;
-static const int MAX_HEIGHT = 800;
+static const int MAX_WIDTH = 800;
+static const int MAX_HEIGHT = 600;
 
 LRESULT CALLBACK WndProc(
     HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -60,44 +59,27 @@ LRESULT CALLBACK WndProc(
     static bool isFirstDown = true;
     static POINT moveToPoint;
     static POINT lineToPoint;
-    static HBITMAP  hBitmap;    // ビットマップ
-    static HDC      hMemDC;     // オフスクリーン
 
     HDC hdc;
-
-    // benchmark
-    std::chrono::system_clock::time_point start, end;
-    long microsec = 0;
 
     // デバッグ情報表示用
     wchar_t format[] = L"%d,%d,%d,%d\n";
     wchar_t* buf = new wchar_t[18]; // (8文字+終端ヌル1文字)x2バイト。いわゆるASCIIコードの範囲はUTF16でも1文字2バイトに収まる
 
     switch (uMsg) {
-    case WM_CREATE:
-        // オフスクリーンをメモリデバイスコンテキストを用いて作成
-        hdc = GetDC(hwnd);
-        hMemDC = CreateCompatibleDC(hdc);
-        hBitmap = CreateCompatibleBitmap(hdc, MAX_WIDTH, MAX_HEIGHT);
-        SelectObject(hMemDC, hBitmap);
-        // オフスクリーンを白で塗りつぶす（デフォルトは黒）
-        PatBlt(hMemDC, 0, 0, MAX_WIDTH, MAX_HEIGHT, WHITENESS);
-
-        ReleaseDC(hwnd, hdc);
-        return 0;
-    case WM_CLOSE:
-        // オフスクリーンの破棄
-        DeleteDC(hMemDC);
-        DeleteObject(hBitmap);
-        DestroyWindow(hwnd);
-        return 0;
-    case WM_MOUSEMOVE:
+    case WM_MOUSEMOVE:     
+        // マウスの左ボタンがダウン状態（押されている）かのチェック
+        // GetKeyState()の結果を
+        // 0x8000 で & するか 0x80 で & すればチェックできる。
+        // （公式ドキュメントでは 0x8000のみ）
         if (GetKeyState(VK_LBUTTON) & 0x8000) {
+            
+            // アップ状態（押されてない）からダウン状態へ
+            // 変化したかどうかをチェック
             if (isFirstDown) {
                 // 現在のマウス座標をmoveToEx用の位置へコピー
                 moveToPoint.x = GET_X_LPARAM(lParam);
                 moveToPoint.y = GET_Y_LPARAM(lParam);
-                MoveToEx(hMemDC, moveToPoint.x, moveToPoint.y, NULL);
                 isFirstDown = false;
             }
             else {
@@ -110,31 +92,18 @@ LRESULT CALLBACK WndProc(
             lineToPoint.x = GET_X_LPARAM(lParam);
             lineToPoint.y = GET_Y_LPARAM(lParam);
 
-            LineTo(hMemDC, lineToPoint.x, lineToPoint.y);
-
             /*
-             * InvalidateRect の第2引数には、
-             * moveToPoint と lineToPoint を元に
-             * 必要最小限の更新領域（RECT）を
-             * 計算して与えることが可能（発展課題）
-             * 下では NULL を与えてウィンドウ全体を更新領域に追加
-             */
-            // InvalidateRect(hwnd, NULL, false);
-
-            RECT rect{};
-            rect.left = moveToPoint.x < lineToPoint.x ? moveToPoint.x : lineToPoint.x;
-            rect.right = moveToPoint.x > lineToPoint.x ? moveToPoint.x : lineToPoint.x;
-            rect.top = moveToPoint.y < lineToPoint.y ? moveToPoint.y : lineToPoint.y;
-            rect.bottom = moveToPoint.y > lineToPoint.y ? moveToPoint.y : lineToPoint.y;
-
-            // rect.left と rect.right が同じ
-            // あるいは rect.top と rect.bottom が同じ値の場合、
-            // WM_PAINTは呼ばれない
-            // よって right と bottom に1足しておけば安全。
-            rect.right++;
-            rect.bottom++;
-            InvalidateRect(hwnd, &rect, false);
-
+             * InvalidateRectの最後の引数を false にすると、
+             * 更新領域内が消去されず、これまで描いた線が残ります。
+             * ただし、ウィンドウのリサイズなどで別途更新領域が発生すると
+             * 消去されます。
+             *
+             * 最後の引数を true にすると、
+             * これまで描いた線は全て消去され、
+             * 直前の線分のみが描画されます。
+             */ 
+            InvalidateRect(hwnd, NULL, false);
+            // InvalidateRect(hwnd, NULL, true);
         }
         else {
             isFirstDown = true;
@@ -145,24 +114,9 @@ LRESULT CALLBACK WndProc(
         PAINTSTRUCT paint;
         hdc = BeginPaint(hwnd, &paint);
 
-        // ベンチマーク開始（発展課題用）
-        start = std::chrono::system_clock::now();
-
-        // ビットブロック転送
-        // ソースはオフスクリーンのデバイスコンテキスト、
-        // コピー先はウィンドウのデバイスコンテキスト。
-        // ソースとコピー先の領域は、
-        // 更新領域と同じなのでを paint構造体から計算できる。
-        BitBlt(
-            hdc,
-            paint.rcPaint.left,
-            paint.rcPaint.top,
-            paint.rcPaint.right - paint.rcPaint.left,
-            paint.rcPaint.bottom - paint.rcPaint.top,
-            hMemDC,
-            paint.rcPaint.left,
-            paint.rcPaint.top,
-            SRCCOPY);
+        MoveToEx(hdc, moveToPoint.x, moveToPoint.y, NULL);
+        LineTo(hdc, lineToPoint.x, lineToPoint.y);
+        
 
         // 更新領域の左上座標と幅、高さを表示
         // x, y, width, height
@@ -174,11 +128,6 @@ LRESULT CALLBACK WndProc(
             paint.rcPaint.bottom - paint.rcPaint.top);
         OutputDebugString(buf);
         */
-
-        // ベンチマーク終了
-        end = std::chrono::system_clock::now();
-        microsec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        OutputDebugString((std::to_wstring(microsec) + L"\n").c_str());
 
         EndPaint(hwnd, &paint);
 
