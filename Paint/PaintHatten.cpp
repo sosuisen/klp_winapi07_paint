@@ -3,8 +3,8 @@
 #include <string>
 #include <chrono>
 
-static const int WIN_WIDTH = 1200;
-static const int WIN_HEIGHT = 800;
+static const int MAX_WIDTH = 1200;
+static const int MAX_HEIGHT = 800;
 
 LRESULT CALLBACK WndProc(
     HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -37,7 +37,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         szAppName, L"Paint",
         WS_OVERLAPPEDWINDOW,
         50, 50,
-        WIN_WIDTH, WIN_HEIGHT,
+        MAX_WIDTH, MAX_HEIGHT,
         NULL, NULL,
         hInstance, NULL);
 
@@ -58,7 +58,6 @@ LRESULT CALLBACK WndProc(
     HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static bool isFirstDown = true;
-
     static POINT moveToPoint;
     static POINT lineToPoint;
     static HBITMAP  hBitmap;    // ビットマップ
@@ -77,13 +76,12 @@ LRESULT CALLBACK WndProc(
     switch (uMsg) {
     case WM_CREATE:
         // オフスクリーンをメモリデバイスコンテキストを用いて作成
-        // （現在のウィンドウサイズを取得するべきだが、略）
         hdc = GetDC(hwnd);
         hMemDC = CreateCompatibleDC(hdc);
-        hBitmap = CreateCompatibleBitmap(hdc, WIN_WIDTH, WIN_HEIGHT);
+        hBitmap = CreateCompatibleBitmap(hdc, MAX_WIDTH, MAX_HEIGHT);
         SelectObject(hMemDC, hBitmap);
         // オフスクリーンを白で塗りつぶす（デフォルトは黒）
-        PatBlt(hMemDC, 0, 0, WIN_WIDTH, WIN_HEIGHT, WHITENESS);
+        PatBlt(hMemDC, 0, 0, MAX_WIDTH, MAX_HEIGHT, WHITENESS);
 
         ReleaseDC(hwnd, hdc);
         return 0;
@@ -99,7 +97,6 @@ LRESULT CALLBACK WndProc(
                 // 現在のマウス座標をmoveToEx用の位置へコピー
                 moveToPoint.x = GET_X_LPARAM(lParam);
                 moveToPoint.y = GET_Y_LPARAM(lParam);
-
                 MoveToEx(hMemDC, moveToPoint.x, moveToPoint.y, NULL);
                 isFirstDown = false;
             }
@@ -124,6 +121,7 @@ LRESULT CALLBACK WndProc(
              */
             // InvalidateRect(hwnd, NULL, false);
 
+
             RECT rect{};
             rect.left = moveToPoint.x < lineToPoint.x ? moveToPoint.x : lineToPoint.x;
             rect.right = moveToPoint.x > lineToPoint.x ? moveToPoint.x : lineToPoint.x;
@@ -137,6 +135,7 @@ LRESULT CALLBACK WndProc(
             rect.right++;
             rect.bottom++;
             InvalidateRect(hwnd, &rect, false);
+
         }
         else {
             isFirstDown = true;
