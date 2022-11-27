@@ -126,9 +126,9 @@ LRESULT CALLBACK WndProc(
 
             RECT rect{};
             rect.left = min(moveToPoint.x, lineToPoint.x);
-            rect.right = max(moveToPoint.x, lineToPoint.x) + 1;
+            rect.right = max(moveToPoint.x, lineToPoint.x) + 2;
             rect.top = min(moveToPoint.y, lineToPoint.y);
-            rect.bottom = max(moveToPoint.y, lineToPoint.y) + 1;
+            rect.bottom = max(moveToPoint.y, lineToPoint.y) + 2;
 
             InvalidateRect(hwnd, &rect, false);
         }
